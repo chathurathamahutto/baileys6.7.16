@@ -1,6 +1,6 @@
 import { proto } from '../../WAProto'
 import { GroupMetadata, GroupParticipant, ParticipantAction, SocketConfig, WAMessageKey, WAMessageStubType } from '../Types'
-import { generateMessageIDV2, unixTimestampSeconds } from '../Utils'
+import { generateMessageID, generateMessageIDV2, unixTimestampSeconds } from '../Utils'
 import { BinaryNode, getBinaryNodeChild, getBinaryNodeChildren, getBinaryNodeChildString, jidEncode, jidNormalizedUser } from '../WABinary'
 import { makeChatsSocket } from './chats'
 
@@ -82,7 +82,7 @@ export const makeGroupsSocket = (config: SocketConfig) => {
 		...sock,
 		groupMetadata,
 		groupCreate: async(subject: string, participants: string[]) => {
-			const key = generateMessageIDV2()
+			const key = generateMessageID()
 			const result = await groupQuery(
 				'@g.us',
 				'set',
@@ -207,7 +207,7 @@ export const makeGroupsSocket = (config: SocketConfig) => {
 					{
 						tag: 'description',
 						attrs: {
-							...(description ? { id: generateMessageIDV2() } : { delete: 'true' }),
+							...(description ? { id: generateMessageID() } : { delete: 'true' }),
 							...(prev ? { prev } : {})
 						},
 						content: description ? [
@@ -339,7 +339,6 @@ export const extractGroupMetadata = (result: BinaryNode) => {
 	const memberAddMode = getBinaryNodeChildString(group, 'member_add_mode') === 'all_member_add'
 	const metadata: GroupMetadata = {
 		id: groupId,
-		addressingMode: group.attrs.addressing_mode as "pn" | "lid",
 		subject: group.attrs.subject,
 		subjectOwner: group.attrs.s_o,
 		subjectTime: +group.attrs.s_t,
@@ -358,7 +357,7 @@ export const extractGroupMetadata = (result: BinaryNode) => {
 		participants: getBinaryNodeChildren(group, 'participant').map(
 			({ attrs }) => {
 				return {
-					id: attrs.jid,
+					id: attrs.phone_number || attrs.jid,
 					admin: (attrs.type || null) as GroupParticipant['admin'],
 				}
 			}
